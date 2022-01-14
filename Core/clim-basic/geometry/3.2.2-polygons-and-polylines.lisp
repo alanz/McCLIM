@@ -35,6 +35,11 @@
   (maybe-print-readably (region sink)
     (print-unreadable-object (region sink :identity t :type t))))
 
+(defmethod print-object ((region standard-polygon) sink)
+  (maybe-print-readably (region sink)
+    (print-unreadable-object (region sink :identity nil :type nil)
+      (format sink "poly ~a" (polygon-points region)))))
+
 (defun make-polyline (point-seq &key closed)
   (assert (every #'pointp point-seq))
   (setq point-seq (remove-duplicated-points point-seq closed))
