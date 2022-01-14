@@ -503,21 +503,43 @@ y2."
             (+ (* (- ry1 y1) (/ dx dy)) x1) ry1)))
 
 (defun pg-splitter->polygon (s)
-  (make-polygon (clean-up-point-sequence
-                 (nconc (pg-splitter-left s)
-                        (reverse (pg-splitter-right s))))))
+  (make-polygon (nconc (pg-splitter-left s)
+                       (reverse (pg-splitter-right s)))))
 
+;;; This function is _not_ suitable for polylines. -- jd 2022-01-14
 (defun clean-up-point-sequence (pts)
-  (do ((points pts)) ((null (rest points)) pts)
-    (destructuring-bind (p1 p2 &rest tail) points
-      (cond ((region-equal p1 p2)
-             (rplacd points tail))
-            ((null tail)
-             (setf points nil))
-            ((colinear-p p1 p2 (first tail))
-             (rplacd points tail))
-            (t
-             (pop points))))))
+  ;; "Ears" with no area are the reason why we must repeat the operation until
+  ;; there are no further chagnes. It sometimes happens that after clipping an
+  ;; empty ear remaining points are colinear and should be removed.
+  (flet ((exclude-point-p (pprev point pnext)
+           ;; When P1=P2 then the point is duplicated.
+           ;; When points are colinear then
+           ;;   P2 c |P1 P3| - redundant point
+           ;;   P3 c |P1 P2| - "ear" with no area
+           (or (region-equal pprev point)
+               (colinear-p pprev point pnext))))
+    (loop for changedp = nil
+          do (do ((points pts)
+                  (p0 (first pts))
+                  (pn nil))
+                 ((null (rest points))
+                  (unless (and pn (rest pts))
+                    (return-from clean-up-point-sequence nil))
+                  (let ((p0 (first pts))
+                        (p1 (second pts)))
+                    (when (exclude-point-p pn p0 p1)
+                      (setf pts (rest pts)
+                            changedp t)))
+                  pts)
+               (destructuring-bind (p1 p2 &rest tail) points
+                 (if (exclude-point-p p1 p2 (or (first tail) p0))
+                     (setf changedp t
+                           pn p1
+                           (cdr points) tail)
+                     (setf pn p2
+                           points (cdr points)))))
+          while changedp
+          finally (return pts))))
 
 ;;; Intersection Line/Polygon
 

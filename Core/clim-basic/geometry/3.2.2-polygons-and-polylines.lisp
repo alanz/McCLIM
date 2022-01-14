@@ -52,7 +52,7 @@
 
 (defun make-polygon (point-seq)
   (assert (every #'pointp point-seq))
-  (setq point-seq (remove-duplicated-points point-seq t))
+  (setf point-seq (clean-up-point-sequence point-seq))
   (if (< (length point-seq) 3)
       +nowhere+
       (make-instance 'standard-polygon :points point-seq)))
