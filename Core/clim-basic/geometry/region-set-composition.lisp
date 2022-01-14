@@ -48,7 +48,7 @@
 ;;; STANDARD-REGION-DIFFERENCE
 (define-commutative-method region-union
     ((a standard-region-difference) (b bounding-rectangle))
-  (make-instance 'standard-region-union :regions (list a b)))
+  (region-complement (region-intersection a (region-complement b))))
 
 ;;; REGION-INTERSECTION
 
@@ -114,6 +114,12 @@
     ((bbox bounding-rectangle) (rdif standard-region-difference))
   (make-instance 'standard-region-intersection :regions (list bbox rdif)))
 
+(defmethod region-intersection
+    ((x standard-region-difference) (y standard-region-difference))
+  (make-instance 'standard-region-difference
+                 :complement (region-union (region-complement x)
+                                           (region-complement y))))
+
 ;;; REGION-DIFFERENCE
 
 ;;; STANDARD-REGION-UNION
@@ -173,6 +179,10 @@
     res))
 
 ;;; STANDARD-REGION-DIFFERENCE
+(defmethod region-difference
+    ((x standard-region-difference) (y standard-region-difference))
+  (region-intersection x (region-complement y)))
+
 (defmethod region-difference ((x bounding-rectangle) (y standard-region-difference))
   (region-intersection x (region-complement y)))
 

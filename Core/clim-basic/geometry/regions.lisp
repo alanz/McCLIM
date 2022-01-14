@@ -97,10 +97,8 @@
   (def-method region-equal               t nil nil nil t   nil nil nil)
   (def-method region-union               a a   a   b   b   b   b   a)
   (def-method region-intersection        b b   b   a   a   a   a   b)
-  ;; We don't support unbounded regions which are not +EVERYWHERE+ or
-  ;; +NOWHERE+ (that would complicate the geometry module). -- jd 2019-09-10
   (def-method region-difference
-    +nowhere+ a (error "Unsupported unbounded region operation.")
+    +nowhere+ a (region-complement b)
     a a a
     +nowhere+ a))
 
@@ -237,6 +235,15 @@
                    :regions (mapcar (lambda (r) (transform-region tr r)) regions))))
 
 
+
+(defmethod region-complement ((region everywhere-mixin))
+  +nowhere+)
+
+(defmethod region-complement ((region nowhere-mixin))
+  +everywhere+)
+
+(defmethod region-complement ((region bounding-rectangle))
+  (make-instance 'standard-region-difference :complement region))
 
 (defclass standard-region-difference (region-set)
   ((complement :initarg :complement :reader region-complement)))
