@@ -14,19 +14,38 @@
 (in-package #:climi)
 
 ;;; REGION-UNION
+(error  "wip")
+;;; Region union can't have region unions as one of its regions.
+(defun composable (union region)
+  (not (typep (region-union union region) 'standard-region-union)))
+
+(defun add-region (union region)
+  (loop for r in (region-set-regions union)
+        
+        for u = (region-union r u)))
 
 ;;; STANDARD-REGION-UNION
 (defmethod region-union ((a standard-region-union) (b standard-region-union))
-  (assert (not (eq b +nowhere+)))
-  (assert (not (eq a +nowhere+)))
-  (make-instance 'standard-region-union
-                 :regions (append (standard-region-set-regions a)
-                                  (standard-region-set-regions b))))
+  (let ((set a))
+    (flet ((union-1 (region)
+             (setf set (region-union set region))))
+      (map-over-region-set-regions #'union-1 b))))
 
 (define-commutative-method region-union
     ((a standard-region-union) (b bounding-rectangle))
-  (make-instance 'standard-region-union
-                 :regions (cons b (standard-region-set-regions a))))
+  (loop with mergedp = nil
+        for r in (region-set-regions a)
+        for c = (region-union r b)
+        if (typep c 'standard-region-union)
+          collect r into regions
+        else
+          collect c into regions
+          and do (setf mergedp t)
+        finally (return (make-instance
+                         'standard-region-union
+                         :regions (if mergedp
+                                      regions
+                                      (list* b regions))))))
 
 ;;; STANDARD-RECTANGLE-SET
 (define-commutative-method region-union ((a standard-rectangle-set) (b path)) a)
@@ -46,9 +65,16 @@
 
 ;;; STANDARD-REGION-INTERSECTION
 ;;; STANDARD-REGION-DIFFERENCE
+(defmethod regin-union
+    ((a standard-region-difference) (b standard-region-difference))
+  (region-complement (intersection (region-complement a)
+                                   (region-complement b))))
+
 (define-commutative-method region-union
     ((a standard-region-difference) (b bounding-rectangle))
-  (region-complement (region-intersection a (region-complement b))))
+  (if (region-equal (region-complement a) b)
+      +everywhere+
+      (region-complement (region-intersection a (region-complement b)))))
 
 ;;; REGION-INTERSECTION
 
@@ -112,7 +138,9 @@
 ;;; STANDARD-REGION-DIFFERENCE
 (define-commutative-method region-intersection
     ((bbox bounding-rectangle) (rdif standard-region-difference))
-  (make-instance 'standard-region-intersection :regions (list bbox rdif)))
+  (if (region-equal bbox (region-complement rdif))
+      +nowhere+
+      (make-instance 'standard-region-intersection :regions (list bbox rdif))))
 
 (defmethod region-intersection
     ((x standard-region-difference) (y standard-region-difference))
