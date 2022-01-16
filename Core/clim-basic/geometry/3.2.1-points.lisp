@@ -36,7 +36,7 @@
 (defmethod print-object ((region standard-point) sink)
   (maybe-print-readably (region sink)
     (with-slots (x y) region
-      (format sink "[~6,2f, ~6,2f]" x y))))
+      (format sink "[~d, ~d]" x y))))
 
 (defmethod point-position ((region standard-point))
   (with-slots (x y) region
